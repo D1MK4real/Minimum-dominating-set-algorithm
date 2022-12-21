@@ -1,2 +1,2 @@
-# Minimum-dominating-set-algorythm
+# Minimum-dominating-set-algorithm
 Computational complexity 2022 MIPT
