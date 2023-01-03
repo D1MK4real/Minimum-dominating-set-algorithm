@@ -29,6 +29,8 @@ def find_path(v, graph, IN, BN, LN, FL, FREE):
                 ans.append(nextv)
             else:
                 break
+        else:
+            break
     return ans
 
 
@@ -54,11 +56,11 @@ def dfs(v, free, freefl, graph, colors):
 
 
 def unreach(free, fl, bn, graph, n):
-    if len(bn) == 0:
-        return False
     freefl = free.union(fl)
     if len(freefl) == 0:
         return True
+    if len(bn) == 0:
+        return False
     colors = [0 for _ in range(n)]
     for v in bn:
         dfs(v, free, freefl, graph, colors)
@@ -147,32 +149,15 @@ def move_from_LN_to_IN(v, graph, IN, BN, LN, FL, FREE):
     return IN_copy, BN_copy, LN_copy, FL_copy, FREE_copy
 
 
-def move_set_from_FREE_to_IN(SET, graph, IN, BN, LN, FL, FREE):
-    FREE_copy = FREE.copy().difference(SET)
-    IN_copy = IN.copy().union(SET)
-    FL_copy = FL.copy()
-    BN_copy = BN.copy()
-    LN_copy = LN.copy()
-    for v in SET:
-        y = set([elem for elem in graph[v]]).intersection(FREE)
-        y2 = set([elem for elem in graph[v]]).intersection(FL)
-        FREE_copy = FREE_copy.difference(y)
-        FL_copy = FL_copy.difference(y2)
-        BN_copy = BN_copy.union(y)
-        LN_copy = LN_copy.union(y2)
-
-    return IN_copy, BN_copy, LN_copy, FL_copy, FREE_copy
-
-
 def move_set_from_FREE_to_IN_special_BN(first, SET, graph, IN, BN, LN, FL, FREE):
     FREE_copy = FREE.copy().difference(SET)
-    IN_copy = IN.copy().union(SET)
+    IN_copy = IN.copy().union(SET).union({first})
     FL_copy = FL.copy()
     BN_copy = BN.copy().difference({first})
     LN_copy = LN.copy()
     for v in (SET.union({first})):
-        y = set([elem for elem in graph[v]]).intersection(FREE)
-        y2 = set([elem for elem in graph[v]]).intersection(FL)
+        y = set([elem for elem in graph[v]]).intersection(FREE_copy)
+        y2 = set([elem for elem in graph[v]]).intersection(FL_copy)
         FREE_copy = FREE_copy.difference(y)
         FL_copy = FL_copy.difference(y2)
         BN_copy = BN_copy.union(y)
@@ -210,7 +195,41 @@ def N_SET(SET, graph):
     return ans.difference(SET)
 
 
-def rec(graph, n, IN, BN, LN, FL, FREE):
+def reduction(graph, n, IN, BN, LN, FL, FREE):
+    for v in range(n):
+        for u in graph[v]:
+            if (v in FL and u in FL) or (v in BN and u in BN):
+                graph[v].remove(u)
+                graph[u].remove(v)
+
+    for v in range(n):
+        con = d(v, graph, IN, BN, LN, FL, FREE)
+        if con == 0 and v in BN:
+            BN = BN.difference({v})
+            LN = LN.union({v})
+        if con == 1 and v in FREE:
+            FREE = FREE.difference({v})
+            FL = FL.union({v})
+        if v in FREE and N(v, graph).intersection(FREE).intersection(FL) == 0:
+            FREE = FREE.difference({v})
+            FL = FL.union({v})
+    for v in range(n):
+        if v in FREE:
+            for u in graph[v]:
+                for k in graph[u]:
+                    if k in graph[v] and d(v, graph, IN, BN, LN, FL, FREE) == 2:
+                        FREE = FREE.difference({v})
+                        FL = FL.union({v})
+    for v in range(n):
+        for u in graph[v]:
+            if (v in LN and u not in IN) or (u in LN and v not in IN):
+                graph[v].remove(u)
+                graph[u].remove(v)
+    return graph, IN, BN, LN, FL, FREE
+
+
+def rec(graph1, n, IN, BN, LN, FL, FREE):
+    graph, IN, BN, LN, FL, FREE = reduction(graph1, n, IN, BN, LN, FL, FREE)
     if not unreach(FREE, FL, BN, graph, n):
         return n, IN
     if set([i for i in range(n)]) == LN.union(IN):
@@ -331,28 +350,28 @@ def rec(graph, n, IN, BN, LN, FL, FREE):
     if set([i for i in range(n)]) == LN.union(IN):
         return len(IN), IN
 
-
+import copy
 n = int(input())
 e = int(input())
 matrix = [[0 for _ in range(n)] for _ in range(n)]
-graph = [[] for _ in range(n)]
+graph1 = [[] for _ in range(n)]
 for _ in range(e):
     i, j = input().split(',')
     i = int(i)
     j = int(j)
     matrix[i][j] = 1
     matrix[j][i] = 1
-    graph[i].append(j)
-    graph[j].append(i)
+    graph1[i].append(j)
+    graph1[j].append(i)
 ans = n
 graphs = None
 for v in tqdm(range(n)):
     IN = {v}
-    BN = N(v, graph)
+    BN = N(v, graph1)
     LN = set([])
     FL = set([])
     FREE = set([_ for _ in range(n)]).difference(IN).difference(BN)
-    ansi = rec(graph, n, IN, BN, LN, FL, FREE)
+    ansi = rec(copy.deepcopy(graph1), n, IN, BN, LN, FL, FREE)
     if ansi[0] < ans:
         ans = ansi[0]
         graphs = ansi[1]
