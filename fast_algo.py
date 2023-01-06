@@ -1,8 +1,11 @@
 import numpy as np
 import pandas as pd
 import scipy.stats as sps
+import copy
 from tqdm.notebook import tqdm
 import warnings
+import networkx as nx
+import time
 
 
 def d(v, graph, IN, BN, LN, FL, FREE):
@@ -210,7 +213,7 @@ def reduction(graph, n, IN, BN, LN, FL, FREE):
         if con == 1 and v in FREE:
             FREE = FREE.difference({v})
             FL = FL.union({v})
-        if v in FREE and N(v, graph).intersection(FREE).intersection(FL) == 0:
+        if v in FREE and len(N(v, graph).intersection(FREE.union(FL))) == 0:
             FREE = FREE.difference({v})
             FL = FL.union({v})
     for v in range(n):
@@ -240,9 +243,9 @@ def rec(graph1, n, IN, BN, LN, FL, FREE):
     if d(v, graph, IN, BN, LN, FL, FREE) >= 3 or (
             d(v, graph, IN, BN, LN, FL, FREE) == 2 and len(set([elem for elem in graph[v]]).intersection(FL)) > 0):
         cort = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-        ans1 = rec(graph, n, *cort)
+        ans1 = rec(copy.deepcopy(graph), n, *cort)
         cort2 = move_from_BN_to_IN(v, graph, IN, BN, LN, FL, FREE)
-        ans2 = rec(graph, n, *cort2)
+        ans2 = rec(copy.deepcopy(graph), n, *cort2)
         mas = [ans1[0], ans2[0]]
         graphs = [ans1[1], ans2[1]]
         k = np.argmin(mas)
@@ -257,19 +260,19 @@ def rec(graph1, n, IN, BN, LN, FL, FREE):
             z, = set([elem for elem in graph[x1]]).difference(set([v]))
             if z in FREE:
                 cort = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-                ans1 = rec(graph, n, *cort)
+                ans1 = rec(copy.deepcopy(graph), n, *cort)
                 cort2 = move_from_BN_to_IN(v, graph, IN, BN, LN, FL, FREE)
                 cort3 = move_from_BN_to_IN(x1, graph, *cort2)
-                ans2 = rec(graph, n, *cort3)
+                ans2 = rec(copy.deepcopy(graph), n, *cort3)
                 cort4 = move_from_BN_to_LN(x1, graph, *cort2)
-                ans3 = rec(graph, n, *cort4)
+                ans3 = rec(copy.deepcopy(graph), n, *cort4)
                 mas = [ans1[0], ans2[0], ans3[0]]
                 graphs = [ans1[1], ans2[1], ans3[1]]
                 k = np.argmin(mas)
                 return mas[k], graphs[k]
             elif z in FL:
                 cort = move_from_BN_to_IN(v, graph, IN, BN, LN, FL, FREE)
-                ans1 = rec(graph, n, *cort)
+                ans1 = rec(copy.deepcopy(graph), n, *cort)
                 return ans1
         else:
             condition = True
@@ -279,30 +282,30 @@ def rec(graph1, n, IN, BN, LN, FL, FREE):
                     condition = False
             if condition and (N(x1, graph).intersection(N(x2, graph))).difference(FL) == {v}:
                 cort = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-                ans1 = rec(graph, n, *cort)
+                ans1 = rec(copy.deepcopy(graph), n, *cort)
                 cort2 = move_from_BN_to_IN(v, graph, IN, BN, LN, FL, FREE)
                 cort3 = move_from_BN_to_IN(x1, graph, *cort2)
-                ans2 = rec(graph, n, *cort3)
+                ans2 = rec(copy.deepcopy(graph), n, *cort3)
                 cort4 = move_from_BN_to_LN(x1, graph, *cort2)
                 cort5 = move_from_BN_to_IN(x2, graph, *cort4)
-                ans3 = rec(graph, n, *cort5)
+                ans3 = rec(copy.deepcopy(graph), n, *cort5)
                 cort6 = move_from_BN_to_LN(x2, graph, *cort4)
                 cort7 = move_set_from_FREE_to_FL(N_SET({x1, x2}, graph).intersection(FREE), graph, *cort6)
                 cort8 = move_set_from_BN_to_LN(N_SET({x1, x2}, graph).intersection(BN), graph, *cort7)
-                ans4 = rec(graph, n, *cort8)
+                ans4 = rec(copy.deepcopy(graph), n, *cort8)
                 mas = [ans1[0], ans2[0], ans3[0], ans4[0]]
                 graphs = [ans1[1], ans2[1], ans3[1], ans4[1]]
                 k = np.argmin(mas)
                 return mas[k], graphs[k]
             else:
                 cort = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-                ans1 = rec(graph, n, *cort)
+                ans1 = rec(copy.deepcopy(graph), n, *cort)
                 cort2 = move_from_BN_to_IN(v, graph, IN, BN, LN, FL, FREE)
                 cort3 = move_from_BN_to_IN(x1, graph, *cort2)
-                ans2 = rec(graph, n, *cort3)
+                ans2 = rec(copy.deepcopy(graph), n, *cort3)
                 cort4 = move_from_BN_to_LN(x1, graph, *cort2)
                 cort5 = move_from_BN_to_IN(x2, graph, *cort4)
-                ans3 = rec(graph, n, *cort5)
+                ans3 = rec(copy.deepcopy(graph), n, *cort5)
                 mas = [ans1[0], ans2[0], ans3[0]]
                 graphs = [ans1[1], ans2[1], ans3[1]]
                 k = np.argmin(mas)
@@ -322,23 +325,27 @@ def rec(graph1, n, IN, BN, LN, FL, FREE):
         if z in FL and d(z, graph, IN, BN, LN, FL, FREE) == 1:
             cort1 = move_set_from_FREE_to_IN_special_BN(v, set(path), graph, IN, BN, LN, FL, FREE)
             cort2 = move_special_to_LN(z, graph, *cort1)
-            ans1 = rec(graph, n, *cort2)
+            ans1 = rec(copy.deepcopy(graph), n, *cort2)
             return ans1
         elif z in FL and d(z, graph, IN, BN, LN, FL, FREE) > 1:
             cort1 = move_set_from_FREE_to_IN_special_BN(v, set(path[:len(path) - 1]), graph, IN, BN, LN, FL, FREE)
-            cort2 = move_special_to_LN(([v] + path)[-1], graph, *cort1)
-            ans1 = rec(graph, n, *cort2)
+            cort2 = None
+            if len(([v] + path)) > 1:
+                cort2 = move_special_to_LN(([v] + path)[-1], graph, *cort1)
+            else:
+                cort2 = cort1
+            ans1 = rec(copy.deepcopy(graph), n, *cort2)
             return ans1
         elif z in BN:
             cort2 = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-            ans1 = rec(graph, n, *cort2)
+            ans1 = rec(copy.deepcopy(graph), n, *cort2)
             return ans1
         elif z in FREE:
             cort1 = move_set_from_FREE_to_IN_special_BN(v, set(path), graph, IN, BN, LN, FL, FREE)
             cort2 = move_special_to_IN(z, graph, *cort1)
-            ans1 = rec(graph, n, *cort2)
+            ans1 = rec(copy.deepcopy(graph), n, *cort2)
             cort3 = move_from_BN_to_LN(v, graph, IN, BN, LN, FL, FREE)
-            ans2 = rec(graph, n, *cort3)
+            ans2 = rec(copy.deepcopy(graph), n, *cort3)
             mas = [ans1[0], ans2[0]]
             graphs = [ans1[1], ans2[1]]
             k = np.argmin(mas)
@@ -350,7 +357,18 @@ def rec(graph1, n, IN, BN, LN, FL, FREE):
     if set([i for i in range(n)]) == LN.union(IN):
         return len(IN), IN
 
-import copy
+
+def from_matrix_to_list(matrix):
+    n = len(matrix[0])
+    graph1 = [[] for _ in range(n)]
+    for i in range(n):
+        for j in range(i, n):
+            if matrix[i][j] == 1:
+                graph1[i].append(j)
+                graph1[j].append(i)
+    return graph1
+
+
 n = int(input())
 e = int(input())
 matrix = [[0 for _ in range(n)] for _ in range(n)]
@@ -363,17 +381,33 @@ for _ in range(e):
     matrix[j][i] = 1
     graph1[i].append(j)
     graph1[j].append(i)
+
+# G = nx.connected_watts_strogatz_graph(20,5,0.5,seed=7)
+# n = 20
+# graph1 = from_matrix_to_list((nx.adjacency_matrix(G).toarray()).tolist())
+
+# n=31
+# matrix = [[] for _ in range(n)]
+# for i in range(n):
+#     inp = input().split(',')
+#     str = [int(x) for x in inp]
+#     matrix[i] = str
+# graph1 = from_matrix_to_list(matrix)
+
 ans = n
 graphs = None
+start_time = time.time()
 for v in tqdm(range(n)):
     IN = {v}
     BN = N(v, graph1)
     LN = set([])
     FL = set([])
     FREE = set([_ for _ in range(n)]).difference(IN).difference(BN)
-    ansi = rec(copy.deepcopy(graph1), n, IN, BN, LN, FL, FREE)
+    dc = copy.deepcopy(graph1)
+    ansi = rec(dc, n, IN, BN, LN, FL, FREE)
     if ansi[0] < ans:
         ans = ansi[0]
         graphs = ansi[1]
-print(ans)
-print(graphs)
+print('Размер множества: ', ans)
+print('Искомое множество вершин', graphs)
+print('Время работы: ', time.time() - start_time, 'c.')
