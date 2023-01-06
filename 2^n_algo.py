@@ -57,28 +57,28 @@ def from_matrix_to_list(matrix):
     return graph1
 
 
-# n = int(input())
-# e = int(input())
-# matrix = [[0 for _ in range(n)] for _ in range(n)]
-# graph1 = [[] for _ in range(n)]
-# for _ in range(e):
-#     i, j = input().split(',')
-#     i = int(i)
-#     j = int(j)
-#     matrix[i][j] = 1
-#     matrix[j][i] = 1
-#     graph1[i].append(j)
-#     graph1[j].append(i)
-
-n = 22
-matrix = [[] for _ in range(n)]
-for i in range(n):
-    inp = input().split(',')
-    str = [int(x) for x in inp]
-    matrix[i] = str
-
-graph1 = from_matrix_to_list(matrix)
-print(len(matrix))
+n = int(input())
+e = int(input())
+matrix = [[0 for _ in range(n)] for _ in range(n)]
+graph1 = [[] for _ in range(n)]
+for _ in range(e):
+    i, j = input().split(',')
+    i = int(i)
+    j = int(j)
+    matrix[i][j] = 1
+    matrix[j][i] = 1
+    graph1[i].append(j)
+    graph1[j].append(i)
+#
+# n = 22
+# matrix = [[] for _ in range(n)]
+# for i in range(n):
+#     inp = input().split(',')
+#     str = [int(x) for x in inp]
+#     matrix[i] = str
+#
+# graph1 = from_matrix_to_list(matrix)
+# print(len(matrix))
 
 ans = n
 graphs = None
